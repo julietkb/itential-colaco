@@ -7,6 +7,7 @@
 4. Navigate to http://localhost:3000/ on a desktop, tablet, or phone
 
 ## To-Do
+- [ ] Use a better state management system for screen prompts
 - [ ] Fix update API for admin
 - [ ] Finish admin UI experience
 - [ ] Add `react-testing-library` tests
