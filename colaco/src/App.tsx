@@ -1,4 +1,5 @@
 import React from "react"
+import axios from "axios"
 import cn from "classnames"
 import { saveAs } from 'file-saver'
 import { omit } from "lodash"
@@ -29,6 +30,9 @@ const messages = {
   buyingConfirm: { message: "Would you like to purchase ", prompt: "ENTER to pay, BACK to adjust quantity" },
   payment: { message: "Processing payment..." },
   purchased: { message: "Congrats on your purchase!", prompt: "Your soda has been saved to your local Downloads folder. Press any button to buy more!" },
+  adminAuth: { message: "Please enter the administrator password." },
+  adminStatus: { message: "", prompt: "Enter the code of the soda you want to update, then press ENTER." },
+  searchResultsAdmin: { message: "New quantity: ", prompt: "Input quantity update and press ENTER; press BACK to search" },
 }
 
 enum CTA {
@@ -48,12 +52,21 @@ const App = () => {
   const [keypadDisabled, setKeypadDisabled] = React.useState<boolean>(false)
   const [searchInput, setSearchInput] = React.useState<string>("")
   const [quantityInput, setQuantityInput] = React.useState<string>("")
+  const [passcodeInput, setPasscodeInput] = React.useState<string>("")
   const [selectedSoda, setSelectedSoda] = React.useState<Soda>()
 
   const getAllSodas = () => {
     fetch("/sodas")
       .then((res) => res.json())
       .then((data) => setData(data.sodas))
+  }
+
+  const updateSodaQuantity = (soda: Soda | undefined, quantity: number) => {
+    if (!soda) return
+    axios({
+      method: "POST",
+      url: `/sodas?name=${soda.name}&quantity=${quantity}`,
+    }).then((res) => console.log(res))
   }
 
   const getSodaByCode = (code: string) => data.filter((soda) => soda.code === code)[0] || null
@@ -73,12 +86,19 @@ const App = () => {
 
   const handleKeypadClick = (key: string) => {
     if (key === CTA.EXIT) {
+      setPasscodeInput("")
+      setQuantityInput("")
       setSearchInput("")
       setScreen(messages.welcome)
+    } else if (key === CTA.ADMIN) {
+      setPasscodeInput("")
+      setQuantityInput("")
+      setSearchInput("")
+      setScreen(messages.adminAuth)
     } else if (screen === messages.welcome) {
       if (!ctaKeys.includes(key)) {
         if (screen !== messages.lookup) setScreen(messages.lookup)
-        if (searchInput.length < 10) setSearchInput(searchInput + key)
+        if (searchInput.length < 6) setSearchInput(searchInput + key)
       }
     } else if (screen === messages.lookup) {
       if (key === CTA.BACK) {
@@ -100,7 +120,7 @@ const App = () => {
           }, 2000)
         }
       } else if (!ctaKeys.includes(key)) {
-        if (searchInput.length < 10) setSearchInput(searchInput + key)
+        if (searchInput.length < 6) setSearchInput(searchInput + key)
       }
     } else if (screen === messages.searchResults) {
       if (key === CTA.BACK) setScreen(messages.lookup)
@@ -123,7 +143,7 @@ const App = () => {
           }, 2000)
         }
       } else if (!ctaKeys.includes(key) && typeof parseInt(key, 10) === "number") {
-        if (quantityInput.length < 10) setQuantityInput(quantityInput + key)
+        if (quantityInput.length < 6) setQuantityInput(quantityInput + key)
       }
     } else if (screen === messages.buyingConfirm) { 
       if (key === CTA.BACK) setScreen(messages.buying)
@@ -140,6 +160,51 @@ const App = () => {
       }
     } else if (screen === messages.purchased) {
       setScreen(messages.welcome)
+    } else if (screen === messages.adminAuth) {
+      if (key === CTA.BACK) {
+        const newPasscode = passcodeInput.substring(0, passcodeInput.length - 1)
+        setPasscodeInput(newPasscode)
+      }
+      else if (!ctaKeys.includes(key)) {
+        if (passcodeInput.length < 4) setPasscodeInput(passcodeInput + key)
+        if (key === "*" && passcodeInput === "147") {
+          setPasscodeInput("")
+          setScreen(messages.adminStatus)
+        }
+      }
+    } else if (screen === messages.adminStatus) {
+      if (key === CTA.BACK) {
+        const newCode = searchInput.substring(0, searchInput.length - 1)
+        setSearchInput(newCode)
+        if (newCode.length === 0) setScreen(messages.welcome)
+      } else if (!ctaKeys.includes(key) && typeof parseInt(key, 10) === "number") {
+        if (searchInput.length < 6) setSearchInput(searchInput + key)
+      } else if (key === CTA.ENTER) {
+        const searchResult = getSodaByCode(searchInput)
+        if (searchResult) {
+          setSelectedSoda(searchResult)
+          setScreen(messages.searchResultsAdmin)
+        } else {
+          setScreen(messages.searchResultsError)
+          setKeypadDisabled(true)
+          setSearchInput("")
+          setTimeout(() => {
+            setScreen(messages.adminStatus)
+            setKeypadDisabled(false)
+          }, 2000)
+        }
+      }
+    } else if (screen === messages.searchResultsAdmin) {
+      if (key === CTA.BACK) {
+        const newQuantity = quantityInput.substring(0, quantityInput.length - 1)
+        setQuantityInput(newQuantity)
+        if (newQuantity.length === 0) setScreen(messages.searchResults)
+      } else if (key === CTA.ENTER) {
+        updateSodaQuantity(selectedSoda, parseInt(quantityInput, 10))
+        setScreen(messages.buyingConfirm)
+      } else if (!ctaKeys.includes(key) && typeof parseInt(key, 10) === "number") {
+        if (quantityInput.length < 6) setQuantityInput(quantityInput + key)
+      }
     }
   }
 
@@ -184,6 +249,31 @@ const App = () => {
         <div className="flex flex-col h-full justify-between">
           <p className="text-sm">{screen.message} {quantityInput} {selectedSoda.name} sodas for {parseInt(quantityInput, 10) * selectedSoda.price} {selectedSoda.currency}?</p>
           <p className="text-xs italic">{screen.prompt}</p>
+        </div>
+      )
+    } else if (screen === messages.adminAuth) {
+      return (
+        <div className="flex flex-col h-full justify-between">
+          <p className="text-md">{screen.message}</p>
+          <p className="text-md">Code: {passcodeInput.length > 0 && passcodeInput}</p>
+        </div>
+      )
+    } else if (screen === messages.adminStatus) {
+      return (
+        <div className="flex flex-col h-full">
+          {data.map((soda) => (
+            <p className={cn("text-xs", {"text-green-500": soda.quantity > 5, "text-red-500": soda.quantity <= 5})} key={soda.code}>
+              {soda.name}: {soda.quantity}
+            </p>
+          ))}
+          <p className="text-xs italic">{screen.prompt} {searchInput.length > 0 && searchInput}</p>
+        </div>
+      )
+    } else if (screen === messages.searchResultsAdmin) {
+      return (
+        <div className="flex flex-col h-full justify-between">
+          <p className="text-md">{screen.message} {quantityInput.length > 0 && quantityInput}</p>
+          {screen.prompt && <p className="text-xs italic">{screen.prompt}</p>}
         </div>
       )
     }
