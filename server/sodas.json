@@ -1,28 +1,36 @@
 {
   "sodas": [
     {
+      "code": "1",
       "name": "Fizz",
+      "color": "17CF14",
       "description": "An effervescent fruity experience with hints of grape and coriander.",
       "price": 1.00,
       "currency": "USD",
       "quantity": 100
     },
     {
+      "code": "2",
       "name": "Pop",
+      "color": "F69540",
       "description": "An explosion of flavor that will knock your socks off!",
       "price": 1.00,
       "currency": "USD",
       "quantity": 100
     },
     {
+      "code": "3",
       "name": "Cola",
+      "color": "CF3514",
       "description": "A basic no nonsense cola that is the perfect pick me up for any occasion.",
       "price": 1.00,
       "currency": "USD",
       "quantity": 200
     },
     {
+      "code": "4",
       "name": "Mega Pop",
+      "color": "F77400",
       "description": "Not for the faint of heart. So flavorful and so invigorating, it should probably be illegal.",
       "price": 1.00,
       "currency": "USD",
