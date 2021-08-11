@@ -1,5 +1,7 @@
 import React from "react"
 import cn from "classnames"
+import { saveAs } from 'file-saver'
+import { omit } from "lodash"
 import { GiSodaCan as SodaIcon } from "react-icons/gi"
 
 type Soda = {
@@ -18,15 +20,15 @@ type Message = {
 }
 
 const messages = {
-  welcome: {
-    message: "Welcome to ColaCo! Please look up a soda's price & quantity by entering its code or press ADMIN."
-  },
+  welcome: { message: "Welcome to ColaCo! Please look up a soda's price & quantity by entering its code or press ADMIN." },
   lookup: { message: "Press ENTER to search soda with code " },
   searchResults: { message: "", prompt: "ENTER to buy, BACK to continue search" },
   searchResultsError: { message: "That soda code does not exist. Please try again with another code." },
   buying: { message: "Enter the quantity you would like to purchase.", prompt: "Selected quantity: " },
   quantityError: { message: "You entered an invalid quantity. Please try again." },
-  buyingConfirm: { message: "Would you like to purchase ", prompt: "ENTER to confirm, BACK to adjust quantity" },
+  buyingConfirm: { message: "Would you like to purchase ", prompt: "ENTER to pay, BACK to adjust quantity" },
+  payment: { message: "Processing payment..." },
+  purchased: { message: "Congrats on your purchase!", prompt: "Your soda has been saved to your local Downloads folder. Press any button to buy more!" },
 }
 
 enum CTA {
@@ -58,8 +60,18 @@ const App = () => {
 
   React.useEffect(getAllSodas, [])
 
+  const downloadPurchasedSodas = () => {
+    if (!selectedSoda) return
+    const purchased = {
+      price: parseInt(quantityInput, 10) * selectedSoda?.price,
+      sodas: Array(parseInt(quantityInput, 10)).fill(omit(selectedSoda, ["code", "color", "price", "quantity"]))
+    }
+    const fileName = `sodasPurchased${Date.now()}.json`
+    const file = new Blob([JSON.stringify(purchased)], { type: 'application/json' })
+    saveAs(file, fileName)
+  }
+
   const handleKeypadClick = (key: string) => {
-    console.log("pressed ", key)
     if (key === CTA.EXIT) {
       setSearchInput("")
       setScreen(messages.welcome)
@@ -85,7 +97,7 @@ const App = () => {
           setTimeout(() => {
             setScreen(messages.welcome)
             setKeypadDisabled(false)
-          }, 2000);
+          }, 2000)
         }
       } else if (!ctaKeys.includes(key)) {
         if (searchInput.length < 10) setSearchInput(searchInput + key)
@@ -108,13 +120,26 @@ const App = () => {
           setTimeout(() => {
             setScreen(messages.buying)
             setKeypadDisabled(false)
-          }, 2000);
+          }, 2000)
         }
-      } else if (!ctaKeys.includes(key) && typeof parseInt(key, 10) === 'number') {
+      } else if (!ctaKeys.includes(key) && typeof parseInt(key, 10) === "number") {
         if (quantityInput.length < 10) setQuantityInput(quantityInput + key)
       }
     } else if (screen === messages.buyingConfirm) { 
       if (key === CTA.BACK) setScreen(messages.buying)
+      else if (key === CTA.ENTER) {
+        setScreen(messages.payment)
+        setKeypadDisabled(true)
+        setSearchInput("")
+        setQuantityInput("")
+        setTimeout(() => {
+          setKeypadDisabled(false)
+          downloadPurchasedSodas()
+          setScreen(messages.purchased)
+        }, 2000)
+      }
+    } else if (screen === messages.purchased) {
+      setScreen(messages.welcome)
     }
   }
 
@@ -201,7 +226,7 @@ const App = () => {
     </div>
   )
 
-  const Dispenser = () => <p className="flex rounded text-gray-100 bg-gray-900 h-12 justify-center items-center">download sodas</p>
+  const Dispenser = () => <p className="flex rounded text-gray-100 bg-gray-900 w-full h-12 justify-center items-center"></p>
 
   return (
     <div className="flex flex-col items-center justify-center h-screen w-screen">
