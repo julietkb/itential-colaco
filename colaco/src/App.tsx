@@ -26,6 +26,7 @@ const messages = {
   searchResultsError: { message: "That soda code does not exist. Please try again with another code." },
   buying: { message: "Enter the quantity you would like to purchase.", prompt: "Selected quantity: " },
   quantityError: { message: "You entered an invalid quantity. Please try again." },
+  buyingConfirm: { message: "Would you like to purchase ", prompt: "ENTER to confirm, BACK to adjust quantity" },
 }
 
 enum CTA {
@@ -99,7 +100,7 @@ const App = () => {
         if (newQuantity.length === 0) setScreen(messages.searchResults)
       } else if (key === CTA.ENTER) {
         if (selectedSoda && parseInt(quantityInput, 10) <= selectedSoda.quantity) {
-          console.log("Todo: Buy the soda")
+          setScreen(messages.buyingConfirm)
         } else {
           setScreen(messages.quantityError)
           setKeypadDisabled(true)
@@ -112,6 +113,8 @@ const App = () => {
       } else if (!ctaKeys.includes(key) && typeof parseInt(key, 10) === 'number') {
         if (quantityInput.length < 10) setQuantityInput(quantityInput + key)
       }
+    } else if (screen === messages.buyingConfirm) { 
+      if (key === CTA.BACK) setScreen(messages.buying)
     }
   }
 
@@ -149,6 +152,13 @@ const App = () => {
         <div className="flex flex-col h-full justify-between">
           <p className="text-md">{screen.message}</p>
           <p className="text-md">{screen.prompt} {quantityInput.length > 0 && quantityInput}</p>
+        </div>
+      )
+    } else if (screen === messages.buyingConfirm && selectedSoda) {
+      return (
+        <div className="flex flex-col h-full justify-between">
+          <p className="text-sm">{screen.message} {quantityInput} {selectedSoda.name} sodas for {parseInt(quantityInput, 10) * selectedSoda.price} {selectedSoda.currency}?</p>
+          <p className="text-xs italic">{screen.prompt}</p>
         </div>
       )
     }
